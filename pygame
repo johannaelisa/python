@@ -1,0 +1,266 @@
+import pygame
+ 
+class Huone:
+    def __init__(self):
+        pygame.init()
+ 
+        self.lataa_kuvat()
+        self.uusi_peli()
+        
+        self.korkeus = len(self.kartta)
+        self.leveys = len(self.kartta[0])
+        self.paljastetut_ruudut()
+ 
+        self.skaala = 40
+        nayton_korkeus = self.skaala * self.korkeus
+        nayton_leveys = self.skaala * self.leveys
+ 
+        self.kolikot = 0
+        self.stalkkeri = {}
+ 
+        pygame.display.set_caption("Pakohuone")
+        self.naytto = pygame.display.set_mode((nayton_leveys, nayton_korkeus + self.skaala))
+        self.fontti = pygame.font.SysFont("Helvetica", 24)
+        
+        self.ohje()
+        self.silmukka()
+ 
+    def ohje(self):
+        while True:
+            for tapahtuma in pygame.event.get():
+                if tapahtuma.type == pygame.KEYDOWN:
+                    if tapahtuma.key == pygame.K_ESCAPE:
+                        for y in range(self.korkeus):
+                            for x in range(self.leveys):
+                                pygame.draw.rect(self.naytto, (0, 0, 0), (x * 40, y * 40, 40, 40))
+                        return
+                
+                rivi1 = self.fontti.render("PAKOHUONE", True, (235, 235, 235))
+                rivi2 = self.fontti.render("Kerää oven avausmaksu", True, (235, 235, 235))
+                rivi3 = self.fontti.render("ja poistu huoneesta.", True, (235, 235, 235))
+                rivi4 = self.fontti.render("Avausmaksu: 10 kolikkoa", True, (235, 235, 235))
+                rivi5 = self.fontti.render("Sulje ohje Esc-näppäimellä.", True, (235, 235, 235))
+                self.naytto.blit(rivi1, (100, 100))
+                self.naytto.blit(rivi2, (100, 140))
+                self.naytto.blit(rivi3, (100, 180))
+                self.naytto.blit(rivi4, (100, 220))
+                self.naytto.blit(rivi5, (100, 360))
+                pygame.display.flip()
+ 
+    def uusi_peli(self):
+        self.kartta = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 0, 0, 1],
+            [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 4, 1],
+            [1, 6, 4, 1, 0, 0, 0, 3, 4, 0, 0, 1, 0, 1, 0, 1],
+            [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 4, 1, 4, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 5, 4, 0, 4, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1]
+        ]
+ 
+    def paljastetut_ruudut(self):
+        self.paljastettu = []
+        for y in range(self.korkeus):
+            rivi = []
+            for x in range(self.leveys):
+                if x > 5 and x < 10 and y > 3 and y < 7:
+                    rivi.append(True)
+                else:
+                    rivi.append(False)
+            self.paljastettu.append(rivi)
+ 
+    def lataa_kuvat(self):
+        self.kuvat = []
+        self.ovi = pygame.transform.scale(pygame.image.load("ovi.png"), (40, 40))
+        self.robo = pygame.transform.scale(pygame.image.load("robo.png"), (40, 40))
+        self.kolikko = pygame.transform.scale(pygame.image.load("kolikko.png"), (40, 40))
+        self.hirvio = pygame.transform.scale(pygame.image.load("hirvio.png"), (40, 40)) 
+        self.kuvat = [0, 1, self.ovi, self.robo, self.kolikko, self.hirvio, self.hirvio]
+ 
+    def silmukka(self):
+        while True:
+            self.tutki_tapahtumat()
+            self.piirra_naytto()
+ 
+    def tutki_tapahtumat(self):
+        for tapahtuma in pygame.event.get():
+            if tapahtuma.type == pygame.KEYDOWN:
+                if tapahtuma.key == pygame.K_LEFT:
+                    self.liiku(0, -1)
+                if tapahtuma.key == pygame.K_RIGHT:
+                    self.liiku(0, 1)
+                if tapahtuma.key == pygame.K_UP:
+                    self.liiku(-1, 0)
+                if tapahtuma.key == pygame.K_DOWN:
+                    self.liiku(1, 0)
+                if tapahtuma.key == pygame.K_ESCAPE:
+                    exit()
+            if tapahtuma.type == pygame.QUIT:
+                exit()
+    
+    def etsi_robo(self):
+        for y in range(self.korkeus):
+            for x in range(self.leveys):
+                if self.kartta[y][x] in [3]:
+                    return (y, x)
+    
+    def liiku(self, liike_y, liike_x):
+        robon_vanha_y, robon_vanha_x = self.etsi_robo()
+        robon_uusi_y = robon_vanha_y + liike_y
+        robon_uusi_x = robon_vanha_x + liike_x
+ 
+        if self.kartta[robon_uusi_y][robon_uusi_x] == 1:
+            self.piirra_naytto()
+            self.tieto_ymparistosta(robon_vanha_y, robon_vanha_x)
+            self.hirvio_liikkuu((robon_vanha_y, robon_vanha_x))
+            return
+        
+        if self.kartta[robon_uusi_y][robon_uusi_x] == 2 and self.kolikot >= 10:
+            self.kartta[robon_uusi_y][robon_uusi_x] -= 2
+            self.avaa_ovi()
+        elif self.kartta[robon_uusi_y][robon_uusi_x] == 2 and self.kolikot < 10:
+            for i in self.stalkkeri:
+                self.stalkkeri[i].append((robon_uusi_y, robon_uusi_x))
+            return
+            
+        if self.kartta[robon_uusi_y][robon_uusi_x] == 4:
+            self.kartta[robon_uusi_y][robon_uusi_x] -= 4
+            self.kolikot += 1
+        
+        if self.kartta[robon_uusi_y][robon_uusi_x] == 5 or self.kartta[robon_uusi_y][robon_uusi_x] == 6:
+            self.peli_paattyy_havioon()
+            
+        self.kartta[robon_vanha_y][robon_vanha_x] -= 3
+        self.kartta[robon_uusi_y][robon_uusi_x] += 3
+        self.paljastettu[robon_uusi_y][robon_uusi_x] = True
+ 
+        self.piirra_naytto()
+        self.tieto_ymparistosta(robon_uusi_y, robon_uusi_x)
+        self.hirvio_liikkuu((robon_uusi_y, robon_uusi_x))
+ 
+    def tieto_ymparistosta(self, y: int, x: int):
+        robon_uusi_y = y
+        robon_uusi_x = x
+        for pysty in range(-1, 2):
+            for vieressa in range(-1, 2):
+                if vieressa == 0 and pysty == 0:
+                    continue
+                self.paljastettu[robon_uusi_y + pysty][robon_uusi_x + vieressa] = True
+                
+                if self.kartta[robon_uusi_y + pysty][robon_uusi_x + vieressa] == 5:
+                    hirvion_sijainti = robon_uusi_y + pysty, robon_uusi_x + vieressa
+                    self.stalkkeri[hirvion_sijainti] = [(hirvion_sijainti)] * 10
+                elif self.kartta[robon_uusi_y + pysty][robon_uusi_x + vieressa] == 6:
+                    hirvion_sijainti = robon_uusi_y + pysty, robon_uusi_x + vieressa
+                    self.stalkkeri[hirvion_sijainti] = [(hirvion_sijainti)] * 10
+    
+    def hirvio_liikkuu(self, sijainti: tuple):
+        if len(self.stalkkeri) == 0:
+            return
+        
+        for i in self.stalkkeri:
+            if self.stalkkeri[i][-1] != sijainti:
+                self.stalkkeri[i].append((sijainti))
+ 
+            sijainti_tuple = self.stalkkeri[i][0]
+            hirvio_vanha_y = sijainti_tuple[0]                
+            hirvio_vanha_x = sijainti_tuple[1]
+ 
+            kohde_tuple = self.stalkkeri[i][1]
+            hirvio_uusi_y = kohde_tuple[0]
+            hirvio_uusi_x = kohde_tuple[1]
+                
+ 
+            if self.kartta[hirvio_vanha_y][hirvio_vanha_x] == 5:
+                if self.kartta[hirvio_uusi_y][hirvio_uusi_x] != 6:
+                    self.kartta[hirvio_vanha_y][hirvio_vanha_x] -= 5
+                    self.kartta[hirvio_uusi_y][hirvio_uusi_x] += 5
+                    self.stalkkeri[i].pop(0)
+                elif self.kartta[hirvio_uusi_y][hirvio_uusi_x] == 6:
+                    self.stalkkeri[i].pop(1)
+                    kohde_tuple = self.stalkkeri[i][1]
+                    hirvio_uusi_y = kohde_tuple[0]
+                    hirvio_uusi_x = kohde_tuple[1]
+                if self.kartta[hirvio_uusi_y][hirvio_uusi_x] == 3:
+                    self.peli_paattyy_havioon()
+                
+            elif self.kartta[hirvio_vanha_y][hirvio_vanha_x] == 6:
+                if self.kartta[hirvio_uusi_y][hirvio_uusi_x] != 5:
+                    self.kartta[hirvio_vanha_y][hirvio_vanha_x] -= 6
+                    self.kartta[hirvio_uusi_y][hirvio_uusi_x] += 6
+                    self.stalkkeri[i].pop(0)
+                if self.kartta[hirvio_uusi_y][hirvio_uusi_x] == 3:
+                    self.peli_paattyy_havioon()
+ 
+                    
+    def avaa_ovi(self):
+        self.peli_paattyy_voittoon()
+            
+    def peli_paattyy_havioon(self):
+        while True:
+            for tapahtuma in pygame.event.get():
+                if tapahtuma.type == pygame.QUIT:
+                    pygame.quit()
+            pygame.draw.rect(self.naytto, (20, 20, 20), (0, 0, 640, 480))
+            fontti = pygame.font.SysFont(None, 64)
+            teksti_pinta = fontti.render("Game over", True, (235, 235, 235))
+            tekstin_leveys = teksti_pinta.get_width()
+            tekstin_korkeus = teksti_pinta.get_height()
+            x = (640 - tekstin_leveys) // 2
+            y = (480 - tekstin_korkeus) // 2
+            self.naytto.blit(teksti_pinta, (x, y))
+            pygame.display.flip()
+    
+    def peli_paattyy_voittoon(self):
+        while True:
+            for tapahtuma in pygame.event.get():
+                if tapahtuma.type == pygame.QUIT:
+                    pygame.quit()
+            pygame.draw.rect(self.naytto, (20, 20, 20), (0, 0, 640, 480))
+            fontti = pygame.font.SysFont(None, 64)
+            teksti_pinta = fontti.render("Pako onnistui!", True, (235, 235, 235))
+            tekstin_leveys = teksti_pinta.get_width()
+            tekstin_korkeus = teksti_pinta.get_height()
+            x = (640 - tekstin_leveys) // 2
+            y = (480 - tekstin_korkeus) // 2
+            self.naytto.blit(teksti_pinta, (x, y))
+            pygame.display.flip()
+        
+    def piirra_naytto(self):
+        pygame.draw.rect(self.naytto, (0, 0, 0), (25, self.korkeus * self.skaala + 10, 200, 30))
+        
+        teksti_kolikot = self.fontti.render("Kolikot: " + str(self.kolikot) + "/10", True, (235, 235, 235), 1)
+        self.naytto.blit(teksti_kolikot, (25, self.korkeus * self.skaala + 10))
+        
+        teksti_lopeta = self.fontti.render("Esc = Lopeta", True, (235, 235, 235))
+        self.naytto.blit(teksti_lopeta, (460, self.korkeus * self.skaala + 10))
+        
+        for y in range(self.korkeus):
+            for x in range(self.leveys):
+                ruutu = self.kartta[y][x]
+                tarkistus= self.paljastettu[y][x]
+                if tarkistus:
+                    if ruutu == 0 and tarkistus == True:
+                        pygame.draw.rect(self.naytto, (50, 50, 50), (x * 40, y * 40, 40, 40)) 
+                    elif ruutu == 1 and tarkistus == True:
+                        pygame.draw.rect(self.naytto, (0, 0, 0), (x * 40, y * 40, 40, 40))
+                    elif ruutu == 2 and tarkistus == True:
+                        self.naytto.blit(self.kuvat[ruutu], (x * 40, y * 40))
+                    elif ruutu == 3 and tarkistus == True:
+                        self.naytto.blit(self.kuvat[ruutu], (x * 40, y * 40))
+                    elif ruutu == 4 and tarkistus == True:
+                        self.naytto.blit(self.kuvat[ruutu], (x * 40, y * 40))
+                    elif ruutu == 5 and tarkistus == True:
+                        self.naytto.blit(self.kuvat[ruutu], (x * 40, y * 40))
+                    elif ruutu == 6 and tarkistus == True:
+                        self.naytto.blit(self.kuvat[ruutu], (x * 40, y * 40))
+                else:
+                    pygame.draw.rect(self.naytto, (0, 0, 0), (x * 40, y * 40, 40, 40))
+ 
+        pygame.display.flip()
+ 
+Huone()
